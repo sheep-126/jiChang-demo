@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>机场语音助手</title>
+  <title>机场语音助手 · 完整版</title>
   <style>
     * {
       margin: 0;
@@ -208,23 +208,6 @@
       box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
     }
 
-    .mic-btn-ctrl.permission-pending::after {
-      content: "!";
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      width: 20px;
-      height: 20px;
-      background: #ff9800;
-      color: white;
-      border-radius: 50%;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-    }
-
     .right-panel {
       width: 460px;
     }
@@ -265,29 +248,17 @@
       margin-right: auto;
       border-left: 4px solid #ff9800;
     }
-
-    /* 加载动画 */
-    .mic-btn-ctrl.loading {
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
-    }
   </style>
 </head>
 
 <body>
-
   <div class="top-bar">
     <button class="top-btn" id="langBtn">中文 / English</button>
   </div>
 
   <div class="container">
     <div class="left-panel">
-      <div class="title">✈️ 机场语音助手</div>
+      <div class="title">✈️ 机场语音助手 · 完整版</div>
 
       <div class="func-section">
         <div class="func-grid">
@@ -350,31 +321,38 @@
       </div>
 
       <div class="ctrl-btns">
-        <button class="ctrl-btn stop-btn">⏹️ 停止播报</button>
+        <button class="ctrl-btn stop-btn" id="stopBtn">⏹️ 停止播报</button>
         <button class="mic-btn-ctrl" id="micBtn">🎤</button>
-        <button class="ctrl-btn clear-btn">🗑️ 清空记录</button>
+        <button class="ctrl-btn clear-btn" id="clearBtn">🗑️ 清空记录</button>
       </div>
     </div>
 
     <div class="right-panel">
-      <div class="chat-box" id="chatBox">
-        <div class="chat-bubble system-bubble">您好！我是机场语音助手，点击🎤按钮授权麦克风，然后长按说话。</div>
-      </div>
+      <div class="chat-box" id="chatBox"></div>
     </div>
   </div>
 
   <script>
     (function() {
-      // ========== 全局变量 ==========
-      const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let recognition = null;
-      let isSpeaking = false;
-      let finalText = "";
-      let micPermission = false;  // 是否已获得麦克风权限
-      let micBtn = document.getElementById("micBtn");
-      let chatBox = document.getElementById("chatBox");
+      // ----- 核心变量 -----
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const chatBox = document.getElementById('chatBox');
+      const micBtn = document.getElementById('micBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const langBtn = document.getElementById('langBtn');
 
-      // ========== 意图和回复数据 ==========
+      let recognition = null;
+      let isListening = false;          // 是否正在录音
+      let isSpeaking = false;           // 是否正在语音播报
+      let permissionGranted = false;    // 是否获得麦克风权限
+
+      // 地图点元素
+      const p1 = document.getElementById('p1');
+      const p2 = document.getElementById('p2');
+      const p3 = document.getElementById('p3');
+
+      // ----- 意图数据 (保持你原来的) -----
       const intentMap = {
         toilet: ["厕所", "卫生间", "上厕所", "方便", "尿急", "洗手间"],
         restaurant: ["吃饭", "肚子饿", "餐厅", "吃东西", "饿了", "美食"],
@@ -404,311 +382,245 @@
         unknown: "抱歉，我没太明白，请再说一遍。"
       };
 
-      // ========== 初始化：页面加载就请求麦克风权限 ==========
-      function initMicrophone() {
-        // 检查浏览器是否支持语音识别
-        if (!Rec) {
-          addMessage("您的浏览器不支持语音识别，请使用 Chrome 或 Edge 浏览器。", "permission");
-          micBtn.disabled = true;
-          micBtn.style.opacity = "0.5";
-          return;
-        }
-
-        // 添加提示，让用户知道需要点击授权
-        addMessage("首次使用需要授权麦克风权限，请点击🎤按钮。", "permission");
-        
-        // 点击麦克风按钮时请求权限
-        micBtn.addEventListener('click', function requestPermission() {
-          // 如果已经有权限了，就不重复请求
-          if (micPermission) return;
-          
-          // 显示正在请求
-          micBtn.classList.add('loading');
-          addMessage("正在请求麦克风权限，请在弹出窗口中选择“允许”...", "permission");
-          
-          // 先请求麦克风权限（通过getUserMedia）
-          navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(function(stream) {
-              // 权限获取成功
-              micPermission = true;
-              micBtn.classList.remove('loading');
-              micBtn.classList.remove('permission-pending');
-              addMessage("✅ 麦克风权限已获取，现在可以长按说话啦！", "system");
-              
-              // 停止所有轨道，释放麦克风（但保留权限状态）
-              stream.getTracks().forEach(track => track.stop());
-              
-              // 初始化语音识别
-              initRecognition();
-              
-              // 移除一次性的事件监听
-              micBtn.removeEventListener('click', requestPermission);
-            })
-            .catch(function(error) {
-              // 权限被拒绝
-              micPermission = false;
-              micBtn.classList.remove('loading');
-              micBtn.classList.add('permission-pending');
-              
-              console.error('麦克风权限错误:', error);
-              
-              let errorMsg = "❌ 麦克风权限被拒绝。";
-              if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                errorMsg = "❌ 您拒绝了麦克风权限。请点击地址栏左侧的🔒图标，重新允许麦克风访问。";
-              } else if (error.name === 'NotFoundError') {
-                errorMsg = "❌ 未检测到麦克风设备，请检查你的麦克风。";
-              } else if (error.name === 'NotReadableError') {
-                errorMsg = "❌ 麦克风被其他应用占用，请关闭其他应用后重试。";
-              }
-              
-              addMessage(errorMsg, "permission");
-              
-              // 提示用户如何重新授权
-              addMessage("授权后刷新页面即可使用", "permission");
-            });
-          
-          // 只触发一次，避免重复请求
-          micBtn.removeEventListener('click', requestPermission);
-        }, { once: true });
-      }
-
-      // ========== 初始化语音识别（有权限后才调用） ==========
-      function initRecognition() {
-        if (recognition) return;
-        
-        try {
-          recognition = new Rec();
-          recognition.lang = "zh-CN";
-          recognition.continuous = false;
-          recognition.interimResults = true;
-          recognition.maxAlternatives = 1;
-          
-          recognition.onresult = (e) => {
-            if (isSpeaking) return;
-            
-            let transcript = "";
-            for (let i = 0; i < e.results.length; i++) {
-              transcript += e.results[i][0].transcript;
-            }
-            
-            finalText = transcript.trim();
-            
-            // 如果是最终结果，进行处理
-            if (e.results[0].isFinal && finalText) {
-              processVoiceCommand(finalText);
-            }
-          };
-          
-          recognition.onerror = (e) => {
-            console.log('语音识别错误:', e.error);
-            if (e.error === 'not-allowed') {
-              micPermission = false;
-              addMessage("麦克风权限已失效，请刷新页面重新授权", "permission");
-            }
-          };
-          
-          recognition.onend = () => {
-            // 可以在这里添加结束处理
-          };
-          
-          console.log('语音识别初始化成功');
-        } catch (e) {
-          console.error('初始化语音识别失败:', e);
-          addMessage("语音识别初始化失败，请刷新页面重试", "permission");
-        }
-      }
-
-      // ========== 处理语音命令 ==========
-      function processVoiceCommand(text) {
-        if (!text) return;
-        
-        addMessage(text, "user");
-        
-        let target = "unknown";
-        for (let key in intentMap) {
-          for (let w of intentMap[key]) {
-            if (text.includes(w)) {
-              target = key;
-              break;
-            }
-          }
-          if (target !== "unknown") break;
-        }
-        
-        const reply = answer[target];
-        addMessage(reply, "system");
-        speakText(reply);
-        
-        if (["toilet", "security", "checkin", "gate"].includes(target)) {
-          showRoute(target);
-        }
-      }
-
-      // ========== 语音播报 ==========
-      function speakText(text) {
-        // 取消当前正在播报的语音
-        window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "zh-CN";
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        
-        isSpeaking = true;
-        utterance.onstart = () => { isSpeaking = true; };
-        utterance.onend = () => { isSpeaking = false; };
-        utterance.onerror = () => { isSpeaking = false; };
-        
-        window.speechSynthesis.speak(utterance);
-      }
-
-      // ========== 添加消息到聊天框 ==========
-      function addMessage(text, type) {
-        const bubble = document.createElement("div");
-        bubble.className = "chat-bubble " + type + "-bubble";
+      // ----- 辅助函数：添加聊天消息 -----
+      function addMessage(text, type = 'system') {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${type}-bubble`;
         bubble.innerText = text;
         chatBox.appendChild(bubble);
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
-      // ========== 显示路线动画 ==========
+      // ----- 语音播报 -----
+      function speakText(text) {
+        if (!text) return;
+        window.speechSynthesis.cancel(); // 打断当前播报
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        isSpeaking = true;
+        utterance.onend = () => { isSpeaking = false; };
+        utterance.onerror = () => { isSpeaking = false; };
+        window.speechSynthesis.speak(utterance);
+      }
+
+      // ----- 显示路线动画 -----
       function showRoute(type) {
-        const points = [p1, p2, p3];
-        points.forEach(p => p.classList.remove("active"));
-        
-        if (type === "security") {
-          setTimeout(() => points[0].classList.add("active"), 0);
-          setTimeout(() => points[1].classList.add("active"), 1000);
-          setTimeout(() => points[2].classList.add("active"), 2000);
-        } else if (type === "toilet") {
-          setTimeout(() => points[0].classList.add("active"), 0);
-          setTimeout(() => points[1].classList.add("active"), 1200);
-        } else if (type === "checkin") {
-          setTimeout(() => points[1].classList.add("active"), 0);
-        } else if (type === "gate") {
-          setTimeout(() => points[1].classList.add("active"), 0);
-          setTimeout(() => points[2].classList.add("active"), 1500);
+        [p1, p2, p3].forEach(p => p.classList.remove('active'));
+        if (type === 'security') {
+          setTimeout(() => p1.classList.add('active'), 0);
+          setTimeout(() => p2.classList.add('active'), 1000);
+          setTimeout(() => p3.classList.add('active'), 2000);
+        } else if (type === 'toilet') {
+          setTimeout(() => p1.classList.add('active'), 0);
+          setTimeout(() => p2.classList.add('active'), 1200);
+        } else if (type === 'checkin') {
+          setTimeout(() => p2.classList.add('active'), 0);
+        } else if (type === 'gate') {
+          setTimeout(() => p2.classList.add('active'), 0);
+          setTimeout(() => p3.classList.add('active'), 1500);
         }
       }
 
-      // ========== 事件绑定 ==========
-      function bindEvents() {
-        // 长按录音
-        micBtn.addEventListener('mousedown', startRecording);
-        micBtn.addEventListener('mouseup', stopRecording);
-        micBtn.addEventListener('mouseleave', stopRecording);
-        
-        // 触屏设备支持
-        micBtn.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          startRecording();
-        });
-        micBtn.addEventListener('touchend', stopRecording);
-        micBtn.addEventListener('touchcancel', stopRecording);
-        
-        // 停止播报
-        document.querySelector(".stop-btn").addEventListener('click', () => {
-          window.speechSynthesis.cancel();
-          isSpeaking = false;
-          addMessage("⏹️ 播报已停止", "system");
-        });
-        
-        // 清空记录
-        document.querySelector(".clear-btn").addEventListener('click', () => {
-          chatBox.innerHTML = '<div class="chat-bubble system-bubble">您好！我是机场语音助手，点击🎤按钮授权麦克风，然后长按说话。</div>';
-        });
-        
-        // 功能按钮点击
-        document.querySelectorAll(".func-btn, .func-btn-checkin").forEach(btn => {
-          btn.addEventListener('click', () => {
-            const cmd = btn.dataset.cmd;
-            const text = btn.querySelector(".func-text").innerText;
-            
-            addMessage(text, "user");
-            
-            if (cmd && answer[cmd]) {
-              addMessage(answer[cmd], "system");
-              speakText(answer[cmd]);
-              if (["toilet", "security", "checkin", "gate"].includes(cmd)) {
-                showRoute(cmd);
-              }
+      // ----- 处理识别到的命令 -----
+      function handleCommand(text) {
+        if (!text) return;
+        addMessage(text, 'user');  // 显示用户说的话
+
+        let target = 'unknown';
+        for (let key in intentMap) {
+          for (let word of intentMap[key]) {
+            if (text.includes(word)) {
+              target = key;
+              break;
             }
-          });
-        });
+          }
+          if (target !== 'unknown') break;
+        }
+
+        const reply = answer[target];
+        addMessage(reply, 'system');
+        speakText(reply);
+        if (['toilet', 'security', 'checkin', 'gate'].includes(target)) {
+          showRoute(target);
+        }
       }
 
-      // ========== 开始录音 ==========
-      function startRecording() {
-        // 检查是否有权限
-        if (!micPermission) {
-          addMessage("请先点击🎤按钮授权麦克风权限", "permission");
+      // ----- 初始化语音识别（获得权限后才调用）-----
+      function initRecognition() {
+        if (recognition) return;
+        if (!SpeechRecognition) {
+          addMessage('❌ 您的浏览器不支持语音识别，请使用 Chrome 或 Edge。', 'permission');
           return;
         }
-        
-        // 检查是否正在播报
-        if (isSpeaking) {
-          addMessage("请等待当前播报结束", "system");
-          return;
+
+        recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          isListening = true;
+          micBtn.classList.add('active');
+          addMessage('🎤 录音中... 请说话', 'system');
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.classList.remove('active');
+        };
+
+        recognition.onerror = (e) => {
+          console.log('识别错误:', e.error);
+          isListening = false;
+          micBtn.classList.remove('active');
+          if (e.error === 'not-allowed') {
+            permissionGranted = false;
+            addMessage('❌ 麦克风权限被拒绝，无法录音。', 'permission');
+          }
+        };
+
+        recognition.onresult = (e) => {
+          let transcript = '';
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+          // 如果是最终结果，才处理
+          if (e.results[0].isFinal && transcript.trim()) {
+            handleCommand(transcript.trim());
+          }
+        };
+
+        addMessage('✅ 语音识别已就绪，长按麦克风按钮说话', 'system');
+      }
+
+      // ----- 页面加载主动请求麦克风权限 (关键改动) -----
+      async function requestMicrophonePermission() {
+        if (permissionGranted) return true;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          addMessage('❌ 浏览器不支持麦克风访问。', 'permission');
+          return false;
         }
-        
-        // 检查语音识别是否就绪
-        if (!recognition) {
-          addMessage("语音识别未就绪，请稍后重试", "permission");
-          return;
-        }
-        
+
         try {
-          micBtn.classList.add("active");
+          addMessage('📢 正在请求麦克风权限，请在弹出的窗口中点击“允许”', 'permission');
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // 权限拿到了，立即释放麦克风（但保留权限状态）
+          stream.getTracks().forEach(track => track.stop());
+          permissionGranted = true;
+          addMessage('✅ 麦克风权限已获得，现在可以长按说话了', 'system');
+          initRecognition();  // 初始化语音识别
+          return true;
+        } catch (err) {
+          console.error('权限错误:', err);
+          permissionGranted = false;
+          let msg = '❌ 无法获取麦克风权限。';
+          if (err.name === 'NotAllowedError') {
+            msg = '❌ 您拒绝了麦克风权限。请点击地址栏左侧的🔒图标，重新允许麦克风。';
+          } else if (err.name === 'NotFoundError') {
+            msg = '❌ 未检测到麦克风设备。';
+          }
+          addMessage(msg, 'permission');
+          return false;
+        }
+      }
+
+      // ----- 开始录音 (由长按触发) -----
+      function startRecording() {
+        if (!permissionGranted) {
+          addMessage('⏳ 请先点击下方“点击授权”按钮允许麦克风', 'permission');
+          return;
+        }
+        if (!recognition) {
+          addMessage('⏳ 语音识别未初始化，请稍后重试', 'permission');
+          return;
+        }
+        if (isListening) return;
+        if (isSpeaking) {
+          addMessage('⏳ 正在播报中，请稍后', 'system');
+          return;
+        }
+        try {
           recognition.start();
         } catch (e) {
-          console.log('录音启动失败:', e);
-          // 如果已经在录音，先停止再重新开始
-          try {
-            recognition.stop();
-            setTimeout(() => {
-              recognition.start();
-            }, 100);
-          } catch (err) {
-            addMessage("录音启动失败，请重试", "permission");
-          }
+          console.log('启动失败, 可能已启动', e);
         }
       }
 
-      // ========== 停止录音 ==========
+      // ----- 停止录音 (松手触发) -----
       function stopRecording() {
-        micBtn.classList.remove("active");
-        
+        if (!isListening) return;
         if (recognition) {
           try {
             recognition.stop();
-          } catch (e) {
-            // 忽略停止时的错误
-          }
+          } catch (e) {}
         }
       }
 
-      // ========== 启动应用 ==========
-      window.onload = function() {
-        // 检查浏览器是否支持所需API
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          addMessage("您的浏览器不支持麦克风访问，请使用 Chrome、Edge 或 Safari 浏览器。", "permission");
-          micBtn.disabled = true;
-          return;
-        }
-        
-        // 初始化麦克风权限请求
-        initMicrophone();
-        
-        // 绑定其他事件
-        bindEvents();
-        
-        // 语言切换按钮（示例）
-        document.getElementById("langBtn").addEventListener('click', () => {
-          addMessage("语言切换功能开发中...", "system");
+      // ----- 事件绑定 -----
+      // 1. 页面加载主动请求权限
+      window.addEventListener('load', () => {
+        // 显示欢迎语
+        addMessage('✈️ 欢迎使用机场语音助手', 'system');
+        addMessage('📌 正在请求麦克风权限...', 'permission');
+        // 延迟一下再请求，避免干扰
+        setTimeout(() => {
+          requestMicrophonePermission();
+        }, 500);
+      });
+
+      // 2. 麦克风长按事件
+      micBtn.addEventListener('mousedown', startRecording);
+      micBtn.addEventListener('mouseup', stopRecording);
+      micBtn.addEventListener('mouseleave', stopRecording);
+      // 触屏支持
+      micBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startRecording();
+      });
+      micBtn.addEventListener('touchend', stopRecording);
+      micBtn.addEventListener('touchcancel', stopRecording);
+
+      // 3. 停止播报
+      stopBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        addMessage('⏹️ 播报已停止', 'system');
+      });
+
+      // 4. 清空聊天
+      clearBtn.addEventListener('click', () => {
+        chatBox.innerHTML = '';
+        addMessage('🗑️ 记录已清空', 'system');
+      });
+
+      // 5. 功能按钮点击
+      document.querySelectorAll('.func-btn, .func-btn-checkin').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cmd = btn.dataset.cmd;
+          const text = btn.querySelector('.func-text')?.innerText || cmd;
+          addMessage(text, 'user');
+          if (cmd && answer[cmd]) {
+            addMessage(answer[cmd], 'system');
+            speakText(answer[cmd]);
+            if (['toilet', 'security', 'checkin', 'gate'].includes(cmd)) {
+              showRoute(cmd);
+            }
+          }
         });
-      };
+      });
+
+      // 6. 语言切换(示例)
+      langBtn.addEventListener('click', () => {
+        addMessage('🌐 语言切换功能待完善', 'system');
+      });
+
+      // 7. 提供一个手动授权按钮 (以防万一)
+      // 但这里不额外加按钮了，可以通过点击状态提示来重试
+      // 如果你想要一个手动重试，可以在聊天框加一个虚拟按钮，暂时不加。
     })();
   </script>
 </body>
-
 </html>
