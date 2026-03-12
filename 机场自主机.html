@@ -3,23 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>机场语音助手 · 修复版</title>
+    <title>机场语音助手 · 阿里云版</title>
     <style>
-        /* 复制你之前的所有样式，这里省略节省空间，你保留原来的全部样式 */
-        /* 为了让你方便，我建议你保留上面你原来的全部样式代码 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #e0f7fa 0%, #81d4fa 100%);
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            position: relative;
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .top-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: white;
+            background: #2196f3;
+        }
+
+        .left-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-size: 32px;
+            color: #1976d2;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .func-section {
+            flex: 1;
+            margin-bottom: 20px;
+        }
+
+        .map-section {
+            flex: 1;
+            margin-bottom: 20px;
+        }
+
+        .func-grid {
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .func-btn-checkin {
+            grid-column: span 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ff9800, #ff5722);
+            color: white;
+            cursor: pointer;
+        }
+
+        .func-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+            cursor: pointer;
+        }
+
+        .func-icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .func-text {
+            font-size: 17px;
+            font-weight: 500;
+        }
+
+        .map-panel {
+            height: 100%;
+            background: #fff;
+            border-radius: 15px;
+            padding: 15px;
+            position: relative;
+            border: 1px solid #e3f2fd;
+        }
+
+        .map-title {
+            font-size: 19px;
+            color: #1976d2;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .airport-map {
+            width: 100%;
+            height: 100%;
+            background: url("https://picsum.photos/id/141/1200/800") center/cover no-repeat;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .route-point {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #f44336;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .route-point.active {
+            animation: routeAnimate 3s forwards;
+        }
+
+        @keyframes routeAnimate {
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            90% {
+                opacity: 1;
+            }
+        }
+
+        .ctrl-btns {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            height: 70px;
+        }
+
+        .ctrl-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .stop-btn {
+            background: #f44336;
+        }
+
+        .clear-btn {
+            background: #607d8b;
+        }
+
+        .mic-btn-ctrl {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: #2196f3;
+            color: white;
+            font-size: 28px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .mic-btn-ctrl.active {
+            background: #f44336;
+            transform: scale(1.08);
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+        }
+
+        .right-panel {
+            width: 460px;
+        }
+
+        .chat-box {
+            height: 100%;
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .chat-bubble {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            margin: 10px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .user-bubble {
+            background: #2196f3;
+            color: white;
+            margin-left: auto;
+        }
+
+        .system-bubble {
+            background: white;
+            color: #333;
+            margin-right: auto;
+        }
+
+        .permission-bubble {
+            background: #fff3e0;
+            color: #e65100;
+            margin-right: auto;
+            border-left: 4px solid #ff9800;
+        }
     </style>
-    <!-- 使用更稳定的 CDN -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/aliyun-nls-js/1.0.1/speechRecognizer.min.js"></script>
+    <!-- 引入阿里云语音识别 SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/aliyun-nls-js@1.0.1/dist/speechRecognizer.min.js"></script>
 </head>
 <body>
-    <!-- 完全保留你原来的HTML结构，不需要改动 -->
-    
+    <div class="top-bar">
+        <button class="top-btn" id="langBtn">中文 / English</button>
+    </div>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="title">✈️ 机场语音助手 · 阿里云版</div>
+
+            <div class="func-section">
+                <div class="func-grid">
+                    <button class="func-btn-checkin" data-cmd="checkin">
+                        <div class="func-icon">🛄</div>
+                        <div class="func-text">值机</div>
+                    </button>
+                    <button class="func-btn" data-cmd="security">
+                        <div class="func-icon">🔍</div>
+                        <div class="func-text">安检</div>
+                    </button>
+                    <button class="func-btn" data-cmd="gate">
+                        <div class="func-icon">🚪</div>
+                        <div class="func-text">登机口</div>
+                    </button>
+                    <button class="func-btn" data-cmd="restaurant">
+                        <div class="func-icon">🍽️</div>
+                        <div class="func-text">餐厅</div>
+                    </button>
+                    <button class="func-btn" data-cmd="baggage">
+                        <div class="func-icon">🧳</div>
+                        <div class="func-text">行李</div>
+                    </button>
+                    <button class="func-btn" data-cmd="toilet">
+                        <div class="func-icon">🚻</div>
+                        <div class="func-text">卫生间</div>
+                    </button>
+                    <button class="func-btn" data-cmd="shop">
+                        <div class="func-icon">🛍️</div>
+                        <div class="func-text">免税店</div>
+                    </button>
+                    <button class="func-btn" data-cmd="transport">
+                        <div class="func-icon">🚌</div>
+                        <div class="func-text">交通</div>
+                    </button>
+                    <button class="func-btn" data-cmd="lost">
+                        <div class="func-icon">🔎</div>
+                        <div class="func-text">失物招领</div>
+                    </button>
+                    <button class="func-btn" data-cmd="special">
+                        <div class="func-icon">👴</div>
+                        <div class="func-text">特殊旅客</div>
+                    </button>
+                    <button class="func-btn" data-cmd="waiting">
+                        <div class="func-icon">⏳</div>
+                        <div class="func-text">候机区</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="map-section">
+                <div class="map-panel">
+                    <div class="map-title">机场地图</div>
+                    <div class="airport-map">
+                        <div class="route-point" style="top:30%;left:20%" id="p1"></div>
+                        <div class="route-point" style="top:50%;left:50%" id="p2"></div>
+                        <div class="route-point" style="top:70%;left:80%" id="p3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ctrl-btns">
+                <button class="ctrl-btn stop-btn" id="stopBtn">⏹️ 停止播报</button>
+                <button class="mic-btn-ctrl" id="micBtn">🎤</button>
+                <button class="ctrl-btn clear-btn" id="clearBtn">🗑️ 清空记录</button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="chat-box" id="chatBox">
+                <div class="chat-bubble system-bubble">✈️ 欢迎使用机场语音助手</div>
+                <div class="chat-bubble system-bubble">📢 正在初始化阿里云语音识别...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         (function() {
             // ========== 配置阿里云 ==========
+            // TODO: 替换成你自己的 AppKey 和 Token
             const ALIYUN_CONFIG = {
                 appkey: 'IOWd51N16fg2DNS0',   // 你的 AppKey
-                token: '你的Token',             // 替换成你的 Token
+                token: '你的Token',            // 替换成你的 Token
                 url: 'wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1'
             };
 
@@ -28,6 +351,7 @@
             const micBtn = document.getElementById('micBtn');
             const stopBtn = document.getElementById('stopBtn');
             const clearBtn = document.getElementById('clearBtn');
+            const langBtn = document.getElementById('langBtn');
             const p1 = document.getElementById('p1');
             const p2 = document.getElementById('p2');
             const p3 = document.getElementById('p3');
@@ -41,7 +365,7 @@
             let processor = null;
             let source = null;
 
-            // ========== 意图数据（保持你原来的）==========
+            // ========== 意图数据 ==========
             const intentMap = {
                 toilet: ["厕所", "卫生间", "上厕所", "方便", "尿急", "洗手间"],
                 restaurant: ["吃饭", "肚子饿", "餐厅", "吃东西", "饿了", "美食"],
@@ -86,6 +410,7 @@
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-CN';
                 utterance.rate = 1.0;
+                utterance.pitch = 1.0;
                 isSpeaking = true;
                 utterance.onend = () => { isSpeaking = false; };
                 utterance.onerror = () => { isSpeaking = false; };
@@ -305,10 +630,13 @@
                 });
             });
 
+            langBtn.addEventListener('click', () => {
+                addMessage('🌐 语言切换功能待完善', 'system');
+            });
+
             // ========== 页面加载完成 ==========
             window.addEventListener('load', () => {
-                addMessage('✈️ 欢迎使用机场语音助手', 'system');
-                addMessage('📢 正在初始化阿里云语音识别...', 'permission');
+                // 聊天框已有初始消息，不用重复添加
                 setTimeout(() => {
                     initAliyunRecognizer();
                 }, 500);
