@@ -4,8 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>机场语音助手 · 完整版</title>
+  <title>机场语音助手 · 阿里云版</title>
   <style>
+    /* 保留你原来的所有样式，这里为了简洁省略，你复制时保留原来的样式部分 */
     * {
       margin: 0;
       padding: 0;
@@ -249,6 +250,8 @@
       border-left: 4px solid #ff9800;
     }
   </style>
+  <!-- 引入阿里云语音识别 SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/aliyun-nls-js@1.0.1/dist/speechRecognizer.min.js"></script>
 </head>
 
 <body>
@@ -258,7 +261,7 @@
 
   <div class="container">
     <div class="left-panel">
-      <div class="title">✈️ 机场语音助手 · 完整版</div>
+      <div class="title">✈️ 机场语音助手 · 阿里云版</div>
 
       <div class="func-section">
         <div class="func-grid">
@@ -334,25 +337,34 @@
 
   <script>
     (function() {
-      // ----- 核心变量 -----
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      // ========== 配置阿里云 ==========
+      // TODO: 替换成你自己的 AppKey 和 Token
+      const ALIYUN_CONFIG = {
+        appkey: 'lOWd51N16fg2DNS0',   // 从阿里云控制台复制
+        token: '0254f06f72084abbad66b2d073e44566',      // 从阿里云控制台复制
+        url: 'wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1'  // 上海节点
+      };
+
+      // ========== 获取页面元素 ==========
       const chatBox = document.getElementById('chatBox');
       const micBtn = document.getElementById('micBtn');
       const stopBtn = document.getElementById('stopBtn');
       const clearBtn = document.getElementById('clearBtn');
       const langBtn = document.getElementById('langBtn');
-
-      let recognition = null;
-      let isListening = false;          // 是否正在录音
-      let isSpeaking = false;           // 是否正在语音播报
-      let permissionGranted = false;    // 是否获得麦克风权限
-
-      // 地图点元素
       const p1 = document.getElementById('p1');
       const p2 = document.getElementById('p2');
       const p3 = document.getElementById('p3');
 
-      // ----- 意图数据 (保持你原来的) -----
+      // ========== 状态变量 ==========
+      let recognizer = null;          // 阿里云识别器
+      let isListening = false;        // 是否正在录音
+      let isSpeaking = false;         // 是否正在播报
+      let mediaStream = null;         // 麦克风流
+      let audioContext = null;        // 音频上下文
+      let processor = null;           // 音频处理器
+      let source = null;              // 音频源
+
+      // ========== 意图数据（保留你原来的）==========
       const intentMap = {
         toilet: ["厕所", "卫生间", "上厕所", "方便", "尿急", "洗手间"],
         restaurant: ["吃饭", "肚子饿", "餐厅", "吃东西", "饿了", "美食"],
@@ -382,7 +394,7 @@
         unknown: "抱歉，我没太明白，请再说一遍。"
       };
 
-      // ----- 辅助函数：添加聊天消息 -----
+      // ========== 辅助函数 ==========
       function addMessage(text, type = 'system') {
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${type}-bubble`;
@@ -391,10 +403,9 @@
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
-      // ----- 语音播报 -----
       function speakText(text) {
         if (!text) return;
-        window.speechSynthesis.cancel(); // 打断当前播报
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-CN';
         utterance.rate = 1.0;
@@ -405,7 +416,6 @@
         window.speechSynthesis.speak(utterance);
       }
 
-      // ----- 显示路线动画 -----
       function showRoute(type) {
         [p1, p2, p3].forEach(p => p.classList.remove('active'));
         if (type === 'security') {
@@ -423,10 +433,9 @@
         }
       }
 
-      // ----- 处理识别到的命令 -----
       function handleCommand(text) {
         if (!text) return;
-        addMessage(text, 'user');  // 显示用户说的话
+        addMessage(text, 'user');
 
         let target = 'unknown';
         for (let key in intentMap) {
@@ -447,134 +456,154 @@
         }
       }
 
-      // ----- 初始化语音识别（获得权限后才调用）-----
-      function initRecognition() {
-        if (recognition) return;
-        if (!SpeechRecognition) {
-          addMessage('❌ 您的浏览器不支持语音识别，请使用 Chrome 或 Edge。', 'permission');
-          return;
+      // ========== 阿里云语音识别初始化 ==========
+      async function initAliyunRecognizer() {
+        // 检查配置
+        if (!ALIYUN_CONFIG.appkey || ALIYUN_CONFIG.appkey === '你的AppKey') {
+          addMessage('❌ 请先在代码中配置阿里云 AppKey 和 Token', 'permission');
+          return false;
         }
 
-        recognition = new SpeechRecognition();
-        recognition.lang = 'zh-CN';
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
+        try {
+          // 创建识别器
+          recognizer = new AliNLS.SpeechRecognizer({
+            appkey: ALIYUN_CONFIG.appkey,
+            token: ALIYUN_CONFIG.token,
+            url: ALIYUN_CONFIG.url
+          });
 
-        recognition.onstart = () => {
+          // 设置回调
+          recognizer.on('started', () => {
+            addMessage('🎤 录音开始，请说话...', 'system');
+          });
+
+          recognizer.on('result', (result) => {
+            if (result && result.text) {
+              handleCommand(result.text);
+            }
+          });
+
+          recognizer.on('error', (error) => {
+            console.error('识别错误:', error);
+            addMessage(`❌ 识别错误: ${error.message || '未知错误'}`, 'permission');
+            stopRecording();
+          });
+
+          recognizer.on('completed', () => {
+            console.log('识别完成');
+          });
+
+          recognizer.on('closed', () => {
+            console.log('连接关闭');
+          });
+
+          addMessage('✅ 阿里云语音识别初始化成功', 'system');
+          return true;
+        } catch (e) {
+          console.error('初始化失败:', e);
+          addMessage(`❌ 初始化失败: ${e.message}`, 'permission');
+          return false;
+        }
+      }
+
+      // ========== 开始录音和识别 ==========
+      async function startRecording() {
+        if (isListening) return;
+        if (!recognizer) {
+          const success = await initAliyunRecognizer();
+          if (!success) return;
+        }
+
+        try {
+          // 获取麦克风权限
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          
+          // 创建音频上下文
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          await audioContext.resume();
+          
+          // 创建音频源
+          source = audioContext.createMediaStreamSource(mediaStream);
+          
+          // 创建处理器（16位PCM）
+          processor = audioContext.createScriptProcessor(4096, 1, 1);
+          processor.onaudioprocess = (e) => {
+            if (!isListening) return;
+            
+            // 将Float32转换为Int16
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcmData = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+            }
+            
+            // 发送音频数据
+            if (recognizer && isListening) {
+              recognizer.sendAudio(pcmData.buffer);
+            }
+          };
+          
+          // 连接节点
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+          
+          // 启动识别
+          recognizer.start({
+            format: 'pcm',
+            sampleRate: audioContext.sampleRate,
+            enableIntermediate: true,
+            enablePunctuation: true
+          });
+          
           isListening = true;
           micBtn.classList.add('active');
-          addMessage('🎤 录音中... 请说话', 'system');
-        };
-
-        recognition.onend = () => {
-          isListening = false;
-          micBtn.classList.remove('active');
-        };
-
-        recognition.onerror = (e) => {
-          console.log('识别错误:', e.error);
-          isListening = false;
-          micBtn.classList.remove('active');
-          if (e.error === 'not-allowed') {
-            permissionGranted = false;
-            addMessage('❌ 麦克风权限被拒绝，无法录音。', 'permission');
-          }
-        };
-
-        recognition.onresult = (e) => {
-          let transcript = '';
-          for (let i = 0; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-          }
-          // 如果是最终结果，才处理
-          if (e.results[0].isFinal && transcript.trim()) {
-            handleCommand(transcript.trim());
-          }
-        };
-
-        addMessage('✅ 语音识别已就绪，长按麦克风按钮说话', 'system');
-      }
-
-      // ----- 页面加载主动请求麦克风权限 (关键改动) -----
-      async function requestMicrophonePermission() {
-        if (permissionGranted) return true;
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          addMessage('❌ 浏览器不支持麦克风访问。', 'permission');
-          return false;
-        }
-
-        try {
-          addMessage('📢 正在请求麦克风权限，请在弹出的窗口中点击“允许”', 'permission');
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          // 权限拿到了，立即释放麦克风（但保留权限状态）
-          stream.getTracks().forEach(track => track.stop());
-          permissionGranted = true;
-          addMessage('✅ 麦克风权限已获得，现在可以长按说话了', 'system');
-          initRecognition();  // 初始化语音识别
-          return true;
+          addMessage('🎤 录音中...', 'system');
+          
         } catch (err) {
-          console.error('权限错误:', err);
-          permissionGranted = false;
-          let msg = '❌ 无法获取麦克风权限。';
-          if (err.name === 'NotAllowedError') {
-            msg = '❌ 您拒绝了麦克风权限。请点击地址栏左侧的🔒图标，重新允许麦克风。';
-          } else if (err.name === 'NotFoundError') {
-            msg = '❌ 未检测到麦克风设备。';
-          }
-          addMessage(msg, 'permission');
-          return false;
+          console.error('启动失败:', err);
+          addMessage(`❌ 启动失败: ${err.message}`, 'permission');
         }
       }
 
-      // ----- 开始录音 (由长按触发) -----
-      function startRecording() {
-        if (!permissionGranted) {
-          addMessage('⏳ 请先点击下方“点击授权”按钮允许麦克风', 'permission');
-          return;
-        }
-        if (!recognition) {
-          addMessage('⏳ 语音识别未初始化，请稍后重试', 'permission');
-          return;
-        }
-        if (isListening) return;
-        if (isSpeaking) {
-          addMessage('⏳ 正在播报中，请稍后', 'system');
-          return;
-        }
-        try {
-          recognition.start();
-        } catch (e) {
-          console.log('启动失败, 可能已启动', e);
-        }
-      }
-
-      // ----- 停止录音 (松手触发) -----
+      // ========== 停止录音 ==========
       function stopRecording() {
         if (!isListening) return;
-        if (recognition) {
-          try {
-            recognition.stop();
-          } catch (e) {}
+        
+        isListening = false;
+        micBtn.classList.remove('active');
+        
+        // 停止识别
+        if (recognizer) {
+          recognizer.stop();
         }
+        
+        // 释放音频资源
+        if (processor) {
+          processor.disconnect();
+          processor = null;
+        }
+        if (source) {
+          source.disconnect();
+          source = null;
+        }
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          mediaStream = null;
+        }
+        
+        addMessage('⏹️ 录音结束', 'system');
       }
 
-      // ----- 事件绑定 -----
-      // 1. 页面加载主动请求权限
-      window.addEventListener('load', () => {
-        // 显示欢迎语
-        addMessage('✈️ 欢迎使用机场语音助手', 'system');
-        addMessage('📌 正在请求麦克风权限...', 'permission');
-        // 延迟一下再请求，避免干扰
-        setTimeout(() => {
-          requestMicrophonePermission();
-        }, 500);
-      });
-
-      // 2. 麦克风长按事件
+      // ========== 事件绑定 ==========
+      // 麦克风按钮：长按开始，松手结束
       micBtn.addEventListener('mousedown', startRecording);
       micBtn.addEventListener('mouseup', stopRecording);
       micBtn.addEventListener('mouseleave', stopRecording);
+      
       // 触屏支持
       micBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -583,20 +612,20 @@
       micBtn.addEventListener('touchend', stopRecording);
       micBtn.addEventListener('touchcancel', stopRecording);
 
-      // 3. 停止播报
+      // 停止播报
       stopBtn.addEventListener('click', () => {
         window.speechSynthesis.cancel();
         isSpeaking = false;
         addMessage('⏹️ 播报已停止', 'system');
       });
 
-      // 4. 清空聊天
+      // 清空聊天
       clearBtn.addEventListener('click', () => {
         chatBox.innerHTML = '';
         addMessage('🗑️ 记录已清空', 'system');
       });
 
-      // 5. 功能按钮点击
+      // 功能按钮点击
       document.querySelectorAll('.func-btn, .func-btn-checkin').forEach(btn => {
         btn.addEventListener('click', () => {
           const cmd = btn.dataset.cmd;
@@ -612,14 +641,17 @@
         });
       });
 
-      // 6. 语言切换(示例)
+      // 语言切换
       langBtn.addEventListener('click', () => {
         addMessage('🌐 语言切换功能待完善', 'system');
       });
 
-      // 7. 提供一个手动授权按钮 (以防万一)
-      // 但这里不额外加按钮了，可以通过点击状态提示来重试
-      // 如果你想要一个手动重试，可以在聊天框加一个虚拟按钮，暂时不加。
+      // 页面加载完成提示
+      addMessage('✈️ 欢迎使用机场语音助手（阿里云版）', 'system');
+      addMessage('📢 正在初始化阿里云语音识别...', 'permission');
+      
+      // 预初始化识别器
+      initAliyunRecognizer();
     })();
   </script>
 </body>
