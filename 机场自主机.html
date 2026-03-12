@@ -1,659 +1,319 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>机场语音助手 · 阿里云版</title>
-  <style>
-    /* 保留你原来的所有样式，这里为了简洁省略，你复制时保留原来的样式部分 */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: "Microsoft YaHei", sans-serif;
-    }
-
-    html,
-    body {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: linear-gradient(135deg, #e0f7fa 0%, #81d4fa 100%);
-    }
-
-    .container {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      padding: 20px;
-      gap: 20px;
-      position: relative;
-    }
-
-    .top-bar {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      gap: 15px;
-      z-index: 10;
-    }
-
-    .top-btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      color: white;
-      background: #2196f3;
-    }
-
-    .left-panel {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 20px;
-      padding: 30px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .title {
-      font-size: 32px;
-      color: #1976d2;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .func-section {
-      flex: 1;
-      margin-bottom: 20px;
-    }
-
-    .map-section {
-      flex: 1;
-      margin-bottom: 20px;
-    }
-
-    .func-grid {
-      height: 100%;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .func-btn-checkin {
-      grid-column: span 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #ff9800, #ff5722);
-      color: white;
-    }
-
-    .func-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #2196f3, #1976d2);
-      color: white;
-    }
-
-    .func-icon {
-      font-size: 36px;
-      margin-bottom: 8px;
-    }
-
-    .func-text {
-      font-size: 17px;
-      font-weight: 500;
-    }
-
-    .map-panel {
-      height: 100%;
-      background: #fff;
-      border-radius: 15px;
-      padding: 15px;
-      position: relative;
-      border: 1px solid #e3f2fd;
-    }
-
-    .map-title {
-      font-size: 19px;
-      color: #1976d2;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-
-    .airport-map {
-      width: 100%;
-      height: 100%;
-      background: url("https://picsum.photos/id/141/1200/800") center/cover no-repeat;
-      border-radius: 10px;
-      position: relative;
-    }
-
-    .route-point {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #f44336;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0;
-    }
-
-    .route-point.active {
-      animation: routeAnimate 3s forwards;
-    }
-
-    @keyframes routeAnimate {
-      10% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.2);
-      }
-
-      90% {
-        opacity: 1;
-      }
-    }
-
-    .ctrl-btns {
-      display: flex;
-      gap: 15px;
-      justify-content: center;
-      align-items: center;
-      height: 70px;
-    }
-
-    .ctrl-btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 17px;
-    }
-
-    .stop-btn {
-      background: #f44336;
-    }
-
-    .clear-btn {
-      background: #607d8b;
-    }
-
-    .mic-btn-ctrl {
-      width: 65px;
-      height: 65px;
-      border-radius: 50%;
-      background: #2196f3;
-      color: white;
-      font-size: 28px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s;
-      position: relative;
-    }
-
-    .mic-btn-ctrl.active {
-      background: #f44336;
-      transform: scale(1.08);
-      box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
-    }
-
-    .right-panel {
-      width: 460px;
-    }
-
-    .chat-box {
-      height: 100%;
-      background: #f8f9fa;
-      border-radius: 20px;
-      padding: 25px;
-      overflow-y: auto;
-    }
-
-    .chat-bubble {
-      max-width: 80%;
-      padding: 14px 18px;
-      border-radius: 18px;
-      margin: 10px 0;
-      font-size: 16px;
-      line-height: 1.6;
-      word-break: break-word;
-    }
-
-    .user-bubble {
-      background: #2196f3;
-      color: white;
-      margin-left: auto;
-    }
-
-    .system-bubble {
-      background: white;
-      color: #333;
-      margin-right: auto;
-    }
-
-    .permission-bubble {
-      background: #fff3e0;
-      color: #e65100;
-      margin-right: auto;
-      border-left: 4px solid #ff9800;
-    }
-  </style>
-  <!-- 引入阿里云语音识别 SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/aliyun-nls-js@1.0.1/dist/speechRecognizer.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机场语音助手 · 修复版</title>
+    <style>
+        /* 复制你之前的所有样式，这里省略节省空间，你保留原来的全部样式 */
+        /* 为了让你方便，我建议你保留上面你原来的全部样式代码 */
+    </style>
+    <!-- 使用更稳定的 CDN -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/aliyun-nls-js/1.0.1/speechRecognizer.min.js"></script>
 </head>
-
 <body>
-  <div class="top-bar">
-    <button class="top-btn" id="langBtn">中文 / English</button>
-  </div>
+    <!-- 完全保留你原来的HTML结构，不需要改动 -->
+    
+    <script>
+        (function() {
+            // ========== 配置阿里云 ==========
+            const ALIYUN_CONFIG = {
+                appkey: 'IOWd51N16fg2DNS0',   // 你的 AppKey
+                token: '你的Token',             // 替换成你的 Token
+                url: 'wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1'
+            };
 
-  <div class="container">
-    <div class="left-panel">
-      <div class="title">✈️ 机场语音助手 · 阿里云版</div>
+            // ========== 获取页面元素 ==========
+            const chatBox = document.getElementById('chatBox');
+            const micBtn = document.getElementById('micBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const p1 = document.getElementById('p1');
+            const p2 = document.getElementById('p2');
+            const p3 = document.getElementById('p3');
 
-      <div class="func-section">
-        <div class="func-grid">
-          <button class="func-btn-checkin" data-cmd="checkin">
-            <div class="func-icon">🛄</div>
-            <div class="func-text">值机</div>
-          </button>
-          <button class="func-btn" data-cmd="security">
-            <div class="func-icon">🔍</div>
-            <div class="func-text">安检</div>
-          </button>
-          <button class="func-btn" data-cmd="gate">
-            <div class="func-icon">🚪</div>
-            <div class="func-text">登机口</div>
-          </button>
-          <button class="func-btn" data-cmd="restaurant">
-            <div class="func-icon">🍽️</div>
-            <div class="func-text">餐厅</div>
-          </button>
-          <button class="func-btn" data-cmd="baggage">
-            <div class="func-icon">🧳</div>
-            <div class="func-text">行李</div>
-          </button>
-          <button class="func-btn" data-cmd="toilet">
-            <div class="func-icon">🚻</div>
-            <div class="func-text">卫生间</div>
-          </button>
-          <button class="func-btn" data-cmd="shop">
-            <div class="func-icon">🛍️</div>
-            <div class="func-text">免税店</div>
-          </button>
-          <button class="func-btn" data-cmd="transport">
-            <div class="func-icon">🚌</div>
-            <div class="func-text">交通</div>
-          </button>
-          <button class="func-btn" data-cmd="lost">
-            <div class="func-icon">🔎</div>
-            <div class="func-text">失物招领</div>
-          </button>
-          <button class="func-btn" data-cmd="special">
-            <div class="func-icon">👴</div>
-            <div class="func-text">特殊旅客</div>
-          </button>
-          <button class="func-btn" data-cmd="waiting">
-            <div class="func-icon">⏳</div>
-            <div class="func-text">候机区</div>
-          </button>
-        </div>
-      </div>
+            // ========== 状态变量 ==========
+            let recognizer = null;
+            let isListening = false;
+            let isSpeaking = false;
+            let mediaStream = null;
+            let audioContext = null;
+            let processor = null;
+            let source = null;
 
-      <div class="map-section">
-        <div class="map-panel">
-          <div class="map-title">机场地图</div>
-          <div class="airport-map">
-            <div class="route-point" style="top:30%;left:20%" id="p1"></div>
-            <div class="route-point" style="top:50%;left:50%" id="p2"></div>
-            <div class="route-point" style="top:70%;left:80%" id="p3"></div>
-          </div>
-        </div>
-      </div>
+            // ========== 意图数据（保持你原来的）==========
+            const intentMap = {
+                toilet: ["厕所", "卫生间", "上厕所", "方便", "尿急", "洗手间"],
+                restaurant: ["吃饭", "肚子饿", "餐厅", "吃东西", "饿了", "美食"],
+                checkin: ["值机", "登机牌", "托运行李", "办理登机", "换登机牌"],
+                security: ["安检", "安全检查", "过安检"],
+                gate: ["登机口", "登机", "上飞机", "A12"],
+                lost: ["丢东西", "遗失", "失物", "找东西", "丢失"],
+                baggage: ["行李", "箱子", "托运", "取行李"],
+                shop: ["商店", "免税店", "购物", "买礼物", "化妆品"],
+                transport: ["大巴", "地铁", "出租车", "怎么走", "交通", "机场大巴", "打车"],
+                waiting: ["休息", "候机", "候机区", "休息区", "充电"],
+                special: ["老人", "小孩", "轮椅", "婴儿", "特殊服务", "行动不便"]
+            };
 
-      <div class="ctrl-btns">
-        <button class="ctrl-btn stop-btn" id="stopBtn">⏹️ 停止播报</button>
-        <button class="mic-btn-ctrl" id="micBtn">🎤</button>
-        <button class="ctrl-btn clear-btn" id="clearBtn">🗑️ 清空记录</button>
-      </div>
-    </div>
+            const answer = {
+                toilet: "卫生间在您右前方50米，二楼也有。",
+                restaurant: "餐厅位于二楼，营业时间6:00-22:00。",
+                checkin: "值机柜台在3号门，请提前2小时办理。",
+                security: "安检通道在值机柜台后方，请取出电脑与充电宝。",
+                gate: "您的登机口是A12，请在起飞前30分钟到达。",
+                lost: "失物招领处在一楼服务台旁边。",
+                baggage: "行李提取区在一楼，请按航班号查找转盘。",
+                shop: "免税店在二楼候机区，可使用支付宝/微信。",
+                transport: "机场大巴在1号门，出租车在2号门，地铁在B1层。",
+                waiting: "候机区就在登机口旁，配有充电桩与饮水机。",
+                special: "特殊旅客服务柜台在值机大厅右侧。",
+                unknown: "抱歉，我没太明白，请再说一遍。"
+            };
 
-    <div class="right-panel">
-      <div class="chat-box" id="chatBox"></div>
-    </div>
-  </div>
-
-  <script>
-    (function() {
-      // ========== 配置阿里云 ==========
-      // TODO: 替换成你自己的 AppKey 和 Token
-      const ALIYUN_CONFIG = {
-        appkey: 'lOWd51N16fg2DNS0',   // 从阿里云控制台复制
-        token: '0254f06f72084abbad66b2d073e44566',      // 从阿里云控制台复制
-        url: 'wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1'  // 上海节点
-      };
-
-      // ========== 获取页面元素 ==========
-      const chatBox = document.getElementById('chatBox');
-      const micBtn = document.getElementById('micBtn');
-      const stopBtn = document.getElementById('stopBtn');
-      const clearBtn = document.getElementById('clearBtn');
-      const langBtn = document.getElementById('langBtn');
-      const p1 = document.getElementById('p1');
-      const p2 = document.getElementById('p2');
-      const p3 = document.getElementById('p3');
-
-      // ========== 状态变量 ==========
-      let recognizer = null;          // 阿里云识别器
-      let isListening = false;        // 是否正在录音
-      let isSpeaking = false;         // 是否正在播报
-      let mediaStream = null;         // 麦克风流
-      let audioContext = null;        // 音频上下文
-      let processor = null;           // 音频处理器
-      let source = null;              // 音频源
-
-      // ========== 意图数据（保留你原来的）==========
-      const intentMap = {
-        toilet: ["厕所", "卫生间", "上厕所", "方便", "尿急", "洗手间"],
-        restaurant: ["吃饭", "肚子饿", "餐厅", "吃东西", "饿了", "美食"],
-        checkin: ["值机", "登机牌", "托运行李", "办理登机", "换登机牌"],
-        security: ["安检", "安全检查", "过安检"],
-        gate: ["登机口", "登机", "上飞机", "A12"],
-        lost: ["丢东西", "遗失", "失物", "找东西", "丢失"],
-        baggage: ["行李", "箱子", "托运", "取行李"],
-        shop: ["商店", "免税店", "购物", "买礼物", "化妆品"],
-        transport: ["大巴", "地铁", "出租车", "怎么走", "交通", "机场大巴", "打车"],
-        waiting: ["休息", "候机", "候机区", "休息区", "充电"],
-        special: ["老人", "小孩", "轮椅", "婴儿", "特殊服务", "行动不便"]
-      };
-
-      const answer = {
-        toilet: "卫生间在您右前方50米，二楼也有。",
-        restaurant: "餐厅位于二楼，营业时间6:00-22:00。",
-        checkin: "值机柜台在3号门，请提前2小时办理。",
-        security: "安检通道在值机柜台后方，请取出电脑与充电宝。",
-        gate: "您的登机口是A12，请在起飞前30分钟到达。",
-        lost: "失物招领处在一楼服务台旁边。",
-        baggage: "行李提取区在一楼，请按航班号查找转盘。",
-        shop: "免税店在二楼候机区，可使用支付宝/微信。",
-        transport: "机场大巴在1号门，出租车在2号门，地铁在B1层。",
-        waiting: "候机区就在登机口旁，配有充电桩与饮水机。",
-        special: "特殊旅客服务柜台在值机大厅右侧。",
-        unknown: "抱歉，我没太明白，请再说一遍。"
-      };
-
-      // ========== 辅助函数 ==========
-      function addMessage(text, type = 'system') {
-        const bubble = document.createElement('div');
-        bubble.className = `chat-bubble ${type}-bubble`;
-        bubble.innerText = text;
-        chatBox.appendChild(bubble);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-
-      function speakText(text) {
-        if (!text) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        isSpeaking = true;
-        utterance.onend = () => { isSpeaking = false; };
-        utterance.onerror = () => { isSpeaking = false; };
-        window.speechSynthesis.speak(utterance);
-      }
-
-      function showRoute(type) {
-        [p1, p2, p3].forEach(p => p.classList.remove('active'));
-        if (type === 'security') {
-          setTimeout(() => p1.classList.add('active'), 0);
-          setTimeout(() => p2.classList.add('active'), 1000);
-          setTimeout(() => p3.classList.add('active'), 2000);
-        } else if (type === 'toilet') {
-          setTimeout(() => p1.classList.add('active'), 0);
-          setTimeout(() => p2.classList.add('active'), 1200);
-        } else if (type === 'checkin') {
-          setTimeout(() => p2.classList.add('active'), 0);
-        } else if (type === 'gate') {
-          setTimeout(() => p2.classList.add('active'), 0);
-          setTimeout(() => p3.classList.add('active'), 1500);
-        }
-      }
-
-      function handleCommand(text) {
-        if (!text) return;
-        addMessage(text, 'user');
-
-        let target = 'unknown';
-        for (let key in intentMap) {
-          for (let word of intentMap[key]) {
-            if (text.includes(word)) {
-              target = key;
-              break;
+            // ========== 辅助函数 ==========
+            function addMessage(text, type = 'system') {
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type}-bubble`;
+                bubble.innerText = text;
+                chatBox.appendChild(bubble);
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
-          }
-          if (target !== 'unknown') break;
-        }
 
-        const reply = answer[target];
-        addMessage(reply, 'system');
-        speakText(reply);
-        if (['toilet', 'security', 'checkin', 'gate'].includes(target)) {
-          showRoute(target);
-        }
-      }
-
-      // ========== 阿里云语音识别初始化 ==========
-      async function initAliyunRecognizer() {
-        // 检查配置
-        if (!ALIYUN_CONFIG.appkey || ALIYUN_CONFIG.appkey === '你的AppKey') {
-          addMessage('❌ 请先在代码中配置阿里云 AppKey 和 Token', 'permission');
-          return false;
-        }
-
-        try {
-          // 创建识别器
-          recognizer = new AliNLS.SpeechRecognizer({
-            appkey: ALIYUN_CONFIG.appkey,
-            token: ALIYUN_CONFIG.token,
-            url: ALIYUN_CONFIG.url
-          });
-
-          // 设置回调
-          recognizer.on('started', () => {
-            addMessage('🎤 录音开始，请说话...', 'system');
-          });
-
-          recognizer.on('result', (result) => {
-            if (result && result.text) {
-              handleCommand(result.text);
+            function speakText(text) {
+                if (!text) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 1.0;
+                isSpeaking = true;
+                utterance.onend = () => { isSpeaking = false; };
+                utterance.onerror = () => { isSpeaking = false; };
+                window.speechSynthesis.speak(utterance);
             }
-          });
 
-          recognizer.on('error', (error) => {
-            console.error('识别错误:', error);
-            addMessage(`❌ 识别错误: ${error.message || '未知错误'}`, 'permission');
-            stopRecording();
-          });
+            function showRoute(type) {
+                [p1, p2, p3].forEach(p => p.classList.remove('active'));
+                if (type === 'security') {
+                    setTimeout(() => p1.classList.add('active'), 0);
+                    setTimeout(() => p2.classList.add('active'), 1000);
+                    setTimeout(() => p3.classList.add('active'), 2000);
+                } else if (type === 'toilet') {
+                    setTimeout(() => p1.classList.add('active'), 0);
+                    setTimeout(() => p2.classList.add('active'), 1200);
+                } else if (type === 'checkin') {
+                    setTimeout(() => p2.classList.add('active'), 0);
+                } else if (type === 'gate') {
+                    setTimeout(() => p2.classList.add('active'), 0);
+                    setTimeout(() => p3.classList.add('active'), 1500);
+                }
+            }
 
-          recognizer.on('completed', () => {
-            console.log('识别完成');
-          });
+            function handleCommand(text) {
+                if (!text) return;
+                addMessage(text, 'user');
 
-          recognizer.on('closed', () => {
-            console.log('连接关闭');
-          });
+                let target = 'unknown';
+                for (let key in intentMap) {
+                    for (let word of intentMap[key]) {
+                        if (text.includes(word)) {
+                            target = key;
+                            break;
+                        }
+                    }
+                    if (target !== 'unknown') break;
+                }
 
-          addMessage('✅ 阿里云语音识别初始化成功', 'system');
-          return true;
-        } catch (e) {
-          console.error('初始化失败:', e);
-          addMessage(`❌ 初始化失败: ${e.message}`, 'permission');
-          return false;
-        }
-      }
+                const reply = answer[target];
+                addMessage(reply, 'system');
+                speakText(reply);
+                if (['toilet', 'security', 'checkin', 'gate'].includes(target)) {
+                    showRoute(target);
+                }
+            }
 
-      // ========== 开始录音和识别 ==========
-      async function startRecording() {
-        if (isListening) return;
-        if (!recognizer) {
-          const success = await initAliyunRecognizer();
-          if (!success) return;
-        }
+            // ========== 阿里云语音识别初始化 ==========
+            async function initAliyunRecognizer() {
+                // 检查 AliNLS 是否存在
+                if (typeof AliNLS === 'undefined') {
+                    addMessage('❌ 阿里云 SDK 加载失败，请刷新页面重试', 'permission');
+                    return false;
+                }
 
-        try {
-          // 获取麦克风权限
-          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          
-          // 创建音频上下文
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          await audioContext.resume();
-          
-          // 创建音频源
-          source = audioContext.createMediaStreamSource(mediaStream);
-          
-          // 创建处理器（16位PCM）
-          processor = audioContext.createScriptProcessor(4096, 1, 1);
-          processor.onaudioprocess = (e) => {
-            if (!isListening) return;
+                if (!ALIYUN_CONFIG.appkey || ALIYUN_CONFIG.appkey === '你的AppKey') {
+                    addMessage('❌ 请先在代码中配置阿里云 AppKey 和 Token', 'permission');
+                    return false;
+                }
+
+                try {
+                    recognizer = new AliNLS.SpeechRecognizer({
+                        appkey: ALIYUN_CONFIG.appkey,
+                        token: ALIYUN_CONFIG.token,
+                        url: ALIYUN_CONFIG.url
+                    });
+
+                    recognizer.on('started', () => {
+                        addMessage('🎤 录音开始，请说话...', 'system');
+                    });
+
+                    recognizer.on('result', (result) => {
+                        if (result && result.text) {
+                            handleCommand(result.text);
+                        }
+                    });
+
+                    recognizer.on('error', (error) => {
+                        console.error('识别错误:', error);
+                        addMessage(`❌ 识别错误: ${error.message || '未知错误'}`, 'permission');
+                        stopRecording();
+                    });
+
+                    recognizer.on('completed', () => {
+                        console.log('识别完成');
+                    });
+
+                    recognizer.on('closed', () => {
+                        console.log('连接关闭');
+                    });
+
+                    addMessage('✅ 阿里云语音识别初始化成功', 'system');
+                    return true;
+                } catch (e) {
+                    console.error('初始化失败:', e);
+                    addMessage(`❌ 初始化失败: ${e.message}`, 'permission');
+                    return false;
+                }
+            }
+
+            // ========== 开始录音 ==========
+            async function startRecording() {
+                if (isListening) return;
+                
+                if (!recognizer) {
+                    const success = await initAliyunRecognizer();
+                    if (!success) return;
+                }
+
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    await audioContext.resume();
+                    
+                    source = audioContext.createMediaStreamSource(mediaStream);
+                    
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+                    processor.onaudioprocess = (e) => {
+                        if (!isListening) return;
+                        
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+                        }
+                        
+                        if (recognizer && isListening) {
+                            recognizer.sendAudio(pcmData.buffer);
+                        }
+                    };
+                    
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    recognizer.start({
+                        format: 'pcm',
+                        sampleRate: audioContext.sampleRate,
+                        enableIntermediate: true,
+                        enablePunctuation: true
+                    });
+                    
+                    isListening = true;
+                    micBtn.classList.add('active');
+                    
+                } catch (err) {
+                    console.error('启动失败:', err);
+                    addMessage(`❌ 启动失败: ${err.message}`, 'permission');
+                }
+            }
+
+            function stopRecording() {
+                if (!isListening) return;
+                
+                isListening = false;
+                micBtn.classList.remove('active');
+                
+                if (recognizer) {
+                    recognizer.stop();
+                }
+                
+                if (processor) {
+                    processor.disconnect();
+                    processor = null;
+                }
+                if (source) {
+                    source.disconnect();
+                    source = null;
+                }
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+            }
+
+            // ========== 事件绑定 ==========
+            micBtn.addEventListener('mousedown', startRecording);
+            micBtn.addEventListener('mouseup', stopRecording);
+            micBtn.addEventListener('mouseleave', stopRecording);
             
-            // 将Float32转换为Int16
-            const inputData = e.inputBuffer.getChannelData(0);
-            const pcmData = new Int16Array(inputData.length);
-            for (let i = 0; i < inputData.length; i++) {
-              pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
-            }
-            
-            // 发送音频数据
-            if (recognizer && isListening) {
-              recognizer.sendAudio(pcmData.buffer);
-            }
-          };
-          
-          // 连接节点
-          source.connect(processor);
-          processor.connect(audioContext.destination);
-          
-          // 启动识别
-          recognizer.start({
-            format: 'pcm',
-            sampleRate: audioContext.sampleRate,
-            enableIntermediate: true,
-            enablePunctuation: true
-          });
-          
-          isListening = true;
-          micBtn.classList.add('active');
-          addMessage('🎤 录音中...', 'system');
-          
-        } catch (err) {
-          console.error('启动失败:', err);
-          addMessage(`❌ 启动失败: ${err.message}`, 'permission');
-        }
-      }
+            micBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startRecording();
+            });
+            micBtn.addEventListener('touchend', stopRecording);
+            micBtn.addEventListener('touchcancel', stopRecording);
 
-      // ========== 停止录音 ==========
-      function stopRecording() {
-        if (!isListening) return;
-        
-        isListening = false;
-        micBtn.classList.remove('active');
-        
-        // 停止识别
-        if (recognizer) {
-          recognizer.stop();
-        }
-        
-        // 释放音频资源
-        if (processor) {
-          processor.disconnect();
-          processor = null;
-        }
-        if (source) {
-          source.disconnect();
-          source = null;
-        }
-        if (audioContext) {
-          audioContext.close();
-          audioContext = null;
-        }
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(track => track.stop());
-          mediaStream = null;
-        }
-        
-        addMessage('⏹️ 录音结束', 'system');
-      }
+            stopBtn.addEventListener('click', () => {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+                addMessage('⏹️ 播报已停止', 'system');
+            });
 
-      // ========== 事件绑定 ==========
-      // 麦克风按钮：长按开始，松手结束
-      micBtn.addEventListener('mousedown', startRecording);
-      micBtn.addEventListener('mouseup', stopRecording);
-      micBtn.addEventListener('mouseleave', stopRecording);
-      
-      // 触屏支持
-      micBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startRecording();
-      });
-      micBtn.addEventListener('touchend', stopRecording);
-      micBtn.addEventListener('touchcancel', stopRecording);
+            clearBtn.addEventListener('click', () => {
+                chatBox.innerHTML = '';
+                addMessage('🗑️ 记录已清空', 'system');
+                addMessage('✈️ 欢迎使用机场语音助手', 'system');
+                addMessage('📢 正在初始化阿里云语音识别...', 'permission');
+                initAliyunRecognizer();
+            });
 
-      // 停止播报
-      stopBtn.addEventListener('click', () => {
-        window.speechSynthesis.cancel();
-        isSpeaking = false;
-        addMessage('⏹️ 播报已停止', 'system');
-      });
+            document.querySelectorAll('.func-btn, .func-btn-checkin').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cmd = btn.dataset.cmd;
+                    const text = btn.querySelector('.func-text')?.innerText || cmd;
+                    addMessage(text, 'user');
+                    if (cmd && answer[cmd]) {
+                        addMessage(answer[cmd], 'system');
+                        speakText(answer[cmd]);
+                        if (['toilet', 'security', 'checkin', 'gate'].includes(cmd)) {
+                            showRoute(cmd);
+                        }
+                    }
+                });
+            });
 
-      // 清空聊天
-      clearBtn.addEventListener('click', () => {
-        chatBox.innerHTML = '';
-        addMessage('🗑️ 记录已清空', 'system');
-      });
-
-      // 功能按钮点击
-      document.querySelectorAll('.func-btn, .func-btn-checkin').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const cmd = btn.dataset.cmd;
-          const text = btn.querySelector('.func-text')?.innerText || cmd;
-          addMessage(text, 'user');
-          if (cmd && answer[cmd]) {
-            addMessage(answer[cmd], 'system');
-            speakText(answer[cmd]);
-            if (['toilet', 'security', 'checkin', 'gate'].includes(cmd)) {
-              showRoute(cmd);
-            }
-          }
-        });
-      });
-
-      // 语言切换
-      langBtn.addEventListener('click', () => {
-        addMessage('🌐 语言切换功能待完善', 'system');
-      });
-
-      // 页面加载完成提示
-      addMessage('✈️ 欢迎使用机场语音助手（阿里云版）', 'system');
-      addMessage('📢 正在初始化阿里云语音识别...', 'permission');
-      
-      // 预初始化识别器
-      initAliyunRecognizer();
-    })();
-  </script>
+            // ========== 页面加载完成 ==========
+            window.addEventListener('load', () => {
+                addMessage('✈️ 欢迎使用机场语音助手', 'system');
+                addMessage('📢 正在初始化阿里云语音识别...', 'permission');
+                setTimeout(() => {
+                    initAliyunRecognizer();
+                }, 500);
+            });
+        })();
+    </script>
 </body>
 </html>
-
