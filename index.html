@@ -1,11 +1,283 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>机场语音助手</title>
-    <meta http-equiv="refresh" content="0;url=机场自主机.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首都机场T3航站楼 · 语音地图指引</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif}
+        html,body{width:100vw;height:100vh;overflow:hidden;background:#eef7fc}
+        .container{width:100vw;height:100vh;display:flex;padding:15px;gap:15px}
+        .left-panel{flex:1;background:#fff;border-radius:18px;padding:20px;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+        .title{font-size:24px;color:#005792;text-align:center;margin-bottom:15px;font-weight:600}
+        .func-section{margin-bottom:15px}
+        .func-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        .func-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;border:none;border-radius:12px;background:#005792;color:#fff;padding:10px;height:80px}
+        .func-btn-checkin{grid-column:span 2;background:#ff6a00}
+        .func-icon{font-size:24px;margin-bottom:4px}
+        .func-text{font-size:13px}
+
+        /* 地图容器（核心） */
+        .map-section{flex:1;position:relative}
+        .map-panel{height:100%;background:#fff;border-radius:12px;padding:10px;position:relative;border:1px solid #00579233}
+        .map-title{font-size:16px;color:#005792;text-align:center;margin-bottom:8px;font-weight:600}
+
+        /* 真实T3航站楼平面图（使用高清机场图） */
+        .airport-map-container{
+            width:100%;
+            height:calc(100% - 30px);
+            position:relative;
+            background:url("https://img0.baidu.com/it/u=1871115033,3820222972&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=500") center/contain no-repeat;
+            border-radius:10px;
+            overflow:hidden;
+        }
+
+        /* 点位样式 */
+        .map-point {
+            position:absolute;
+            width:20px;
+            height:20px;
+            border-radius:50%;
+            transform:translate(-50%,-50%);
+            z-index:5;
+            opacity:0;
+            transition:all .3s;
+        }
+        .map-point.show{opacity:1;animation:pulse 1.5s infinite ease-in-out}
+        @keyframes pulse{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.2)}}
+
+        /* 不同类型点位配色 */
+        .point-checkin{background:#ff6a00;box-shadow:0 0 8px #ff6a00}
+        .point-security{background:#f44336;box-shadow:0 0 8px #f44336}
+        .point-gate{background:#4caf50;box-shadow:0 0 8px #4caf50}
+        .point-toilet{background:#2196f3;box-shadow:0 0 8px #2196f3}
+        .point-shop{background:#9c27b0;box-shadow:0 0 8px #9c27b0}
+        .point-restaurant{background:#ff9800;box-shadow:0 0 8px #ff9800}
+        .point-baggage{background:#00bcd4;box-shadow:0 0 8px #00bcd4}
+        .point-lost{background:#795548;box-shadow:0 0 8px #795548}
+        .point-special{background:#e91e63;box-shadow:0 0 8px #e91e63}
+        .point-transport{background:#673ab7;box-shadow:0 0 8px #673ab7}
+        .point-waiting{background:#009688;box-shadow:0 0 8px #009688}
+
+        /* 路线样式 */
+        .map-route-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4}
+        .route-line{
+            position:absolute;
+            background:#f44336;
+            height:4px;
+            border-radius:2px;
+            transform-origin:left center;
+            opacity:0;
+            transition:opacity .5s,width .8s;
+        }
+        .route-line.show{opacity:.8}
+
+        .ctrl-btns{display:flex;gap:15px;justify-content:center;align-items:center;height:60px}
+        .mic-btn-ctrl{width:60px;height:60px;border-radius:50%;border:none;background:#005792;color:#fff;font-size:24px;cursor:pointer}
+        .mic-btn-ctrl.active{background:#f44336;animation:scale .3s}
+        @keyframes scale{0%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+        .right-panel{width:420px;background:#fff;border-radius:18px;padding:15px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+        .chat-box{height:100%;overflow-y:auto}
+        .chat-bubble{max-width:85%;padding:10px 14px;border-radius:14px;margin:8px 0;font-size:14px}
+        .user-bubble{background:#005792;color:#fff;margin-left:auto}
+        .system-bubble{background:#f8f9fa;color:#333;margin-right:auto}
+    </style>
 </head>
 <body>
-    <p>正在跳转到语音助手... <a href="机场自主机.html">点击这里</a></p>
-</body>
-</html>
+<div class="container">
+    <div class="left-panel">
+        <div class="title">✈️ 首都机场 T3 航站楼 · 语音导航</div>
+
+        <div class="func-section">
+            <div class="func-grid">
+                <button class="func-btn-checkin" data-cmd="checkin">
+                    <div class="func-icon">🛄</div>
+                    <div class="func-text">值机</div>
+                </button>
+                <button class="func-btn" data-cmd="security">
+                    <div class="func-icon">🔍</div>
+                    <div class="func-text">安检</div>
+                </button>
+                <button class="func-btn" data-cmd="gate">
+                    <div class="func-icon">🚪</div>
+                    <div class="func-text">登机口</div>
+                </button>
+                <button class="func-btn" data-cmd="restaurant">
+                    <div class="func-icon">🍽️</div>
+                    <div class="func-text">餐厅</div>
+                </button>
+                <button class="func-btn" data-cmd="toilet">
+                    <div class="func-icon">🚻</div>
+                    <div class="func-text">卫生间</div>
+                </button>
+                <button class="func-btn" data-cmd="shop">
+                    <div class="func-icon">🛍️</div>
+                    <div class="func-text">免税店</div>
+                </button>
+                <button class="func-btn" data-cmd="baggage">
+                    <div class="func-icon">🧳</div>
+                    <div class="func-text">行李</div>
+                </button>
+                <button class="func-btn" data-cmd="lost">
+                    <div class="func-icon">🔎</div>
+                    <div class="func-text">失物</div>
+                </button>
+                <button class="func-btn" data-cmd="special">
+                    <div class="func-icon">👴</div>
+                    <div class="func-text">特殊</div>
+                </button>
+                <button class="func-btn" data-cmd="transport">
+                    <div class="func-icon">🚌</div>
+                    <div class="func-text">交通</div>
+                </button>
+            </div>
+        </div>
+
+        <div class="map-section">
+            <div class="map-panel">
+                <div class="map-title">📍 首都机场 T3 航站楼 · 地图指引</div>
+                <div class="airport-map-container" id="mapContainer">
+                    <div class="map-route-layer" id="routeLayer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ctrl-btns">
+            <button class="mic-btn-ctrl" id="micBtn">🎤</button>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="chat-box" id="chatBox">
+            <div class="chat-bubble system-bubble">✈️ 首都机场 T3 语音导航已就绪</div>
+            <div class="chat-bubble system-bubble">🗺️ 支持：安检/值机/登机口/卫生间等语音导航</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== 核心配置 ==========
+// 首都机场T3坐标（你提供的）
+const LOCATION_COORDS = {
+    'T3中心': { top: '50%', left: '50%' },
+    '值机柜台': { top: '42%', left: '58%', type: 'checkin' },
+    '安检区': { top: '47%', left: '63%', type: 'security' },
+    '登机口A12': { top: '60%', left: '70%', type: 'gate' },
+    '餐厅': { top: '35%', left: '30%', type: 'restaurant' },
+    '行李提取': { top: '65%', left: '55%', type: 'baggage' },
+    '失物招领': { top: '28%', left: '22%', type: 'lost' },
+    '特殊旅客': { top: '40%', left: '55%', type: 'special' },
+    '卫生间': { top: '50%', left: '65%', type: 'toilet' },
+    '免税店': { top: '32%', left: '35%', type: 'shop' },
+    '候机区': { top: '68%', left: '68%', type: 'waiting' },
+    '交通中心': { top: '65%', left: '18%', type: 'transport' }
+};
+
+// 指令配置
+const CMD_MAP = {
+    checkin: { name: '值机柜台', desc: '值机柜台位于3号门，请提前2小时办理。' },
+    security: { name: '安检区', desc: '安检通道在值机柜台后方，请取出电脑与充电宝。', route: { from: '值机柜台', to: '安检区' } },
+    gate: { name: '登机口A12', desc: '登机口A12，安检后步行约3分钟。', route: { from: '安检区', to: '登机口A12' } },
+    restaurant: { name: '餐厅', desc: '餐厅位于二楼，提供中西餐及咖啡。' },
+    toilet: { name: '卫生间', desc: '卫生间在右前方50米，二楼也有无障碍卫生间。' },
+    shop: { name: '免税店', desc: '免税店在二楼候机区，涵盖美妆、烟酒、奢侈品。' },
+    baggage: { name: '行李提取', desc: '行李提取区在一楼，按航班号查找转盘。' },
+    lost: { name: '失物招领', desc: '失物招领处在一楼服务台旁。' },
+    special: { name: '特殊旅客', desc: '特殊旅客服务在值机大厅右侧。' },
+    transport: { name: '交通中心', desc: '交通中心包含大巴、出租、地铁（B1层）。' },
+    waiting: { name: '候机区', desc: '候机区在登机口旁，提供充电饮水。' }
+};
+
+// 语音关键词
+const KEYWORDS = {
+    checkin: ['值机', '登机牌', '托运行李'],
+    security: ['安检', '安全检查', '过安检'],
+    gate: ['登机口', 'A12', '上飞机'],
+    restaurant: ['餐厅', '吃饭', '饿了'],
+    toilet: ['卫生间', '厕所', '洗手间'],
+    shop: ['免税店', '购物', '买东西'],
+    baggage: ['行李', '提取'],
+    lost: ['失物', '丢东西'],
+    special: ['特殊旅客', '轮椅', '老人'],
+    transport: ['交通', '大巴', '出租车'],
+    waiting: ['候机区', '等待']
+};
+
+// ========== 工具函数 ==========
+function addMessage(text, type='system') {
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = `chat-bubble ${type}-bubble`;
+    div.innerText = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function speak(text) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    window.speechSynthesis.speak(u);
+}
+
+// ========== 地图操作 ==========
+function clearMap() {
+    document.getElementById('routeLayer').innerHTML = '';
+    const points = document.querySelectorAll('.map-point');
+    points.forEach(p=>p.remove());
+}
+
+// 添加点位
+function addPoint(name) {
+    const loc = LOCATION_COORDS[name];
+    if(!loc) return;
+
+    const div = document.createElement('div');
+    div.className = `map-point show point-${loc.type}`;
+    div.style.top = loc.top;
+    div.style.left = loc.left;
+    div.title = name;
+    document.getElementById('mapContainer').appendChild(div);
+    return div;
+}
+
+// 绘制路线
+function drawRoute(fromName, toName) {
+    const from = LOCATION_COORDS[fromName];
+    const to = LOCATION_COORDS[toName];
+    if(!from || !to) return;
+
+    const layer = document.getElementById('routeLayer');
+    const line = document.createElement('div');
+    line.className = 'route-line';
+
+    const container = document.querySelector('.airport-map-container');
+    const rect = container.getBoundingClientRect();
+    
+    const fx = parseFloat(from.left);
+    const fy = parseFloat(from.top);
+    const tx = parseFloat(to.left);
+    const ty = parseFloat(to.top);
+
+    // 转换为像素
+    const fromX = fx / 100 * rect.width;
+    const fromY = fy / 100 * rect.height;
+    const toX = tx / 100 * rect.width;
+    const toY = ty / 100 * rect.height;
+
+    const length = Math.hypot(toX - fromX, toY - fromY);
+    const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+
+    line.style.left = fromX + 'px';
+    line.style.top = fromY + 'px';
+    line.style.width = length + 'px';
+    line.style.transform = `rotate(${angle}deg)`;
+    layer.appendChild(line);
+
+    setTimeout(()=>line.classList.add('show'), 200);
+}
+
+// 处理指令
+function handleCommand(text, isBtn=false) {
+    if(!isBtn) addMessage(text, 'user
