@@ -23,7 +23,7 @@
         .func-icon{font-size:24px;margin-bottom:4px}
         .func-text{font-size:13px}
 
-        /* 地图容器（适配你的t3-map.jpg） */
+        /* 地图容器（适配你的图片文件夹名：image） */
         .map-section{flex:1;position:relative}
         .map-panel{height:100%;background:#fff;border-radius:12px;padding:10px;position:relative;border:1px solid #00579233}
         .map-title{font-size:16px;color:#005792;text-align:center;margin-bottom:8px;font-weight:600}
@@ -31,14 +31,13 @@
             width:100%;
             height:calc(100% - 30px);
             position:relative;
-            /* 精准匹配你的图片路径 */
-            background:url("images/t3-map.jpg") center/contain no-repeat;
+            background:url("image/t3-map.jpg") center/contain no-repeat;
             border-radius:10px;
             overflow:hidden;
             border:1px solid #eee;
         }
 
-        /* 点位样式（增强：彩色图标+闪烁动画） */
+        /* 点位样式 */
         .map-point {
             position:absolute;
             width:24px;
@@ -57,24 +56,24 @@
         .map-point.show{opacity:1;animation:pulse 1.5s infinite ease-in-out}
         @keyframes pulse{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.3)}100%{transform:translate(-50%,-50%) scale(1)}}
 
-        /* 不同功能点位配色+图标（精准区分） */
-        .point-checkin{background:#ff6a00;box-shadow:0 0 10px #ff6a00} /* 值机-橙色 */
-        .point-security{background:#f44336;box-shadow:0 0 10px #f44336} /* 安检-红色 */
-        .point-gate{background:#4caf50;box-shadow:0 0 10px #4caf50}   /* 登机口-绿色 */
-        .point-toilet{background:#2196f3;box-shadow:0 0 10px #2196f3} /* 卫生间-蓝色 */
-        .point-shop{background:#9c27b0;box-shadow:0 0 10px #9c27b0}   /* 免税店-紫色 */
-        .point-restaurant{background:#ff9800;box-shadow:0 0 10px #ff9800} /* 餐厅-黄色 */
-        .point-baggage{background:#00bcd4;box-shadow:0 0 10px #00bcd4} /* 行李-青色 */
-        .point-lost{background:#795548;box-shadow:0 0 10px #795548}   /* 失物-棕色 */
-        .point-special{background:#e91e63;box-shadow:0 0 10px #e91e63} /* 特殊旅客-粉色 */
-        .point-transport{background:#673ab7;box-shadow:0 0 10px #673ab7} /* 交通-深紫 */
-        .point-waiting{background:#009688;box-shadow:0 0 10px #009688} /* 候机区-深绿 */
+        /* 点位配色 */
+        .point-checkin{background:#ff6a00;box-shadow:0 0 10px #ff6a00}
+        .point-security{background:#f44336;box-shadow:0 0 10px #f44336}
+        .point-gate{background:#4caf50;box-shadow:0 0 10px #4caf50}
+        .point-toilet{background:#2196f3;box-shadow:0 0 10px #2196f3}
+        .point-shop{background:#9c27b0;box-shadow:0 0 10px #9c27b0}
+        .point-restaurant{background:#ff9800;box-shadow:0 0 10px #ff9800}
+        .point-baggage{background:#00bcd4;box-shadow:0 0 10px #00bcd4}
+        .point-lost{background:#795548;box-shadow:0 0 10px #795548}
+        .point-special{background:#e91e63;box-shadow:0 0 10px #e91e63}
+        .point-transport{background:#673ab7;box-shadow:0 0 10px #673ab7}
+        .point-waiting{background:#009688;box-shadow:0 0 10px #009688}
 
-        /* 路线样式（增强：粗线+渐变+动画） */
+        /* 路线样式 */
         .map-route-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4}
         .route-line{
             position:absolute;
-            background:linear-gradient(90deg, #f44336, #ff9800);
+            background:linear-gradient(90deg, #ff6a00, #f44336);
             height:6px;
             border-radius:3px;
             transform-origin:left center;
@@ -177,24 +176,23 @@
 </div>
 
 <script>
-// ========== 核心配置（精准匹配你的T3平面图坐标） ==========
+// ========== 核心配置（精准匹配你的T3平面图） ==========
 const LOCATION_COORDS = {
-    // 以下坐标完全适配你的t3-map.jpg图片
-    'T3中心': { top: '50%', left: '50%', type: 'checkin', icon: '📍' },
-    '值机柜台': { top: '38%', left: '45%', type: 'checkin', icon: '🛄' },
-    '安检区': { top: '45%', left: '55%', type: 'security', icon: '🔍' },
-    '登机口A12': { top: '60%', left: '65%', type: 'gate', icon: '🚪' },
-    '餐厅': { top: '30%', left: '30%', type: 'restaurant', icon: '🍽️' },
-    '行李提取': { top: '70%', left: '40%', type: 'baggage', icon: '🧳' },
-    '失物招领': { top: '25%', left: '25%', type: 'lost', icon: '🔎' },
-    '特殊旅客': { top: '35%', left: '50%', type: 'special', icon: '👴' },
-    '卫生间': { top: '50%', left: '60%', type: 'toilet', icon: '🚻' },
-    '免税店': { top: '32%', left: '60%', type: 'shop', icon: '🛍️' },
-    '候机区': { top: '65%', left: '70%', type: 'waiting', icon: '⏳' },
-    '交通中心': { top: '75%', left: '20%', type: 'transport', icon: '🚌' }
+    'T3中心':      { top: '50%', left: '50%', type: 'checkin', icon: '📍' },
+    '值机柜台':    { top: '40%', left: '42%', type: 'checkin', icon: '🛄' },
+    '安检区':      { top: '48%', left: '52%', type: 'security', icon: '🔍' },
+    '登机口A12':   { top: '62%', left: '68%', type: 'gate', icon: '🚪' },
+    '餐厅':        { top: '32%', left: '28%', type: 'restaurant', icon: '🍽️' },
+    '行李提取':    { top: '72%', left: '45%', type: 'baggage', icon: '🧳' },
+    '失物招领':    { top: '26%', left: '22%', type: 'lost', icon: '🔎' },
+    '特殊旅客':    { top: '38%', left: '48%', type: 'special', icon: '👴' },
+    '卫生间':      { top: '52%', left: '62%', type: 'toilet', icon: '🚻' },
+    '免税店':      { top: '34%', left: '60%', type: 'shop', icon: '🛍️' },
+    '候机区':      { top: '68%', left: '72%', type: 'waiting', icon: '⏳' },
+    '交通中心':    { top: '76%', left: '20%', type: 'transport', icon: '🚌' }
 };
 
-// 指令配置（含精准路线规划）
+// 指令配置（含路线）
 const CMD_MAP = {
     checkin: { name: '值机柜台', desc: '值机柜台位于3号门区域，请提前2小时办理登机牌及行李托运。', route: null },
     security: { name: '安检区', desc: '安检通道在值机柜台后方50米处，请提前取出电脑、充电宝等物品。', route: { from: '值机柜台', to: '安检区' } },
@@ -209,7 +207,7 @@ const CMD_MAP = {
     waiting: { name: '候机区', desc: '候机区位于各登机口旁，提供充电、饮水、休息区等服务，部分区域有免费WiFi。', route: null }
 };
 
-// 语音关键词匹配（覆盖常见说法）
+// 语音关键词
 const KEYWORDS = {
     checkin: ['值机', '登机牌', '托运行李', '行李托运', '办票'],
     security: ['安检', '安全检查', '过安检', '安检口'],
@@ -225,7 +223,6 @@ const KEYWORDS = {
 };
 
 // ========== 工具函数 ==========
-// 添加聊天消息
 function addMessage(text, type='system') {
     const box = document.getElementById('chatBox');
     const div = document.createElement('div');
@@ -235,7 +232,6 @@ function addMessage(text, type='system') {
     box.scrollTop = box.scrollHeight;
 }
 
-// 语音播报
 function speakText(text) {
     window.speechSynthesis.cancel();
     if (!('speechSynthesis' in window)) {
@@ -249,18 +245,15 @@ function speakText(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// 清空地图标记和路线
 function clearMap() {
     document.getElementById('routeLayer').innerHTML = '';
     const points = document.querySelectorAll('.map-point');
     points.forEach(p => p.remove());
 }
 
-// 添加地图点位（精准匹配你的图片）
 function addMapPoint(name) {
     const loc = LOCATION_COORDS[name];
     if (!loc) return null;
-
     const point = document.createElement('div');
     point.className = `map-point point-${loc.type}`;
     point.style.top = loc.top;
@@ -268,53 +261,38 @@ function addMapPoint(name) {
     point.title = name;
     point.innerText = loc.icon || '';
     document.getElementById('mapContainer').appendChild(point);
-    
     setTimeout(() => point.classList.add('show'), 200);
     return point;
 }
 
-// 绘制路线（精准适配你的图片尺寸）
 function drawRoute(fromName, toName) {
     const from = LOCATION_COORDS[fromName];
     const to = LOCATION_COORDS[toName];
     if (!from || !to) return;
-
     const layer = document.getElementById('routeLayer');
     const line = document.createElement('div');
     line.className = 'route-line';
-
-    // 获取你的地图容器精准尺寸
     const container = document.querySelector('.airport-map-container');
     const rect = container.getBoundingClientRect();
-    
-    // 百分比转像素（精准计算）
-    const fromX = (parseFloat(from.left) / 100) * rect.width;
-    const fromY = (parseFloat(from.top) / 100) * rect.height;
-    const toX = (parseFloat(to.left) / 100) * rect.width;
-    const toY = (parseFloat(to.top) / 100) * rect.height;
-
-    // 精准计算路线长度和角度
-    const length = Math.hypot(toX - fromX, toY - fromY);
-    const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
-
-    // 精准设置路线位置
+    const fromX = (parseFloat(from.left)/100)*rect.width;
+    const fromY = (parseFloat(from.top)/100)*rect.height;
+    const toX = (parseFloat(to.left)/100)*rect.width;
+    const toY = (parseFloat(to.top)/100)*rect.height;
+    const length = Math.hypot(toX-fromX, toY-fromY);
+    const angle = Math.atan2(toY-fromY, toX-fromX)*180/Math.PI;
     line.style.left = `${fromX}px`;
     line.style.top = `${fromY}px`;
     line.style.width = `0px`;
     line.style.transform = `rotate(${angle}deg)`;
     layer.appendChild(line);
-
-    // 路线展开动画
     setTimeout(() => {
         line.style.width = `${length}px`;
         line.classList.add('show');
     }, 300);
 }
 
-// 处理指令（核心逻辑）
 function handleCommand(inputText, isButton=false) {
     clearMap();
-
     let targetCmd = '';
     if (isButton) {
         targetCmd = inputText;
@@ -329,20 +307,16 @@ function handleCommand(inputText, isButton=false) {
             }
         }
     }
-
     if (!targetCmd || !CMD_MAP[targetCmd]) {
         const tip = '❌ 未识别指令，请尝试：安检、值机、登机口、卫生间等';
         addMessage(tip, 'system');
         speakText('抱歉，我没听懂，请说安检、值机、登机口等指令');
         return;
     }
-
     const cmdConfig = CMD_MAP[targetCmd];
     addMessage(cmdConfig.desc, 'system');
     speakText(cmdConfig.desc);
-
     addMapPoint(cmdConfig.name);
-
     if (cmdConfig.route) {
         addMapPoint(cmdConfig.route.from);
         addMapPoint(cmdConfig.route.to);
@@ -350,12 +324,10 @@ function handleCommand(inputText, isButton=false) {
     }
 }
 
-// ========== 语音识别初始化（适配GitHub Pages） ==========
 function initVoiceRecognition() {
     const micBtn = document.getElementById('micBtn');
     let recognition = null;
     let isListening = false;
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
         addMessage('⚠️ 您的浏览器不支持语音识别，请点击按钮操作', 'permission');
@@ -365,19 +337,16 @@ function initVoiceRecognition() {
         });
         return;
     }
-
     recognition = new SpeechRecognition();
     recognition.lang = 'zh-CN';
     recognition.continuous = false;
     recognition.interimResults = false;
-
     recognition.onresult = (e) => {
         const text = e.results[0][0].transcript.trim();
         handleCommand(text);
         micBtn.classList.remove('active');
         isListening = false;
     };
-
     recognition.onerror = (err) => {
         const errTip = `❌ 语音识别失败：${err.error}，请手动输入`;
         addMessage(errTip, 'system');
@@ -386,12 +355,10 @@ function initVoiceRecognition() {
         const text = prompt('语音识别失败，请手动输入指令：', '安检');
         if (text) handleCommand(text);
     };
-
     recognition.onend = () => {
         micBtn.classList.remove('active');
         isListening = false;
     };
-
     micBtn.addEventListener('mousedown', (e) => {
         e.preventDefault();
         if (isListening) return;
@@ -406,7 +373,6 @@ function initVoiceRecognition() {
             if (text) handleCommand(text);
         }
     });
-
     micBtn.addEventListener('mouseup', () => {
         if (isListening) {
             recognition.stop();
@@ -421,23 +387,18 @@ function initVoiceRecognition() {
     });
 }
 
-// ========== 页面初始化 ==========
 document.addEventListener('DOMContentLoaded', () => {
     initVoiceRecognition();
-
     document.querySelectorAll('.func-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const cmd = btn.dataset.cmd;
             handleCommand(cmd, true);
         });
     });
-
     document.getElementById('stopBtn').addEventListener('click', () => {
         window.speechSynthesis.cancel();
         addMessage('⏹️ 已停止语音播报', 'system');
     });
-
-    // 初始化显示T3中心点位（精准居中）
     setTimeout(() => addMapPoint('T3中心'), 1000);
 });
 </script>
